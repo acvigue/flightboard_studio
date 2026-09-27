@@ -1,0 +1,53 @@
+@font-face {
+  font-family: 'Jost';
+  font-weight: 400;
+  src: url('./fonts/Jost-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Jost';
+  font-weight: 600;
+  src: url('./fonts/Jost-SemiBold.ttf') format('truetype');
+}
+:root {
+  --bg: #15171b;
+  --panel: #1d2026;
+  --panel2: #23272e;
+  --line: #2f343c;
+  --text: #e6e8ec;
+  --muted: #9aa1ad;
+  --accent: #4f9cff;
+  --accent2: #ffb347;
+  --danger: #ff5c5c;
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+}
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+button {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 5px;
+  padding: 4px 9px; font: inherit; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.active { background: #2a3a55; border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+input, select, textarea {
+  background: #0f1114; color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; width: 100%;
+}
+input[type='checkbox'] { width: auto; }
+label.row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 6px; margin: 4px 0; color: var(--muted); }
+label.row input, label.row select { color: var(--text); }
+h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 12px 0 6px; }
+.panel { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px; }
+.panel.right { border-right: none; border-left: 1px solid var(--line); }
+.muted { color: var(--muted); }
+.small { font-size: 11px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.log { background: #0f1114; border: 1px solid var(--line); border-radius: 4px; padding: 6px; max-height: 220px; overflow: auto; white-space: pre-wrap; }
+.list { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 4px; }
+.list div { padding: 4px 6px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.list div:hover, .list div.sel { background: #2a3a55; }
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 8px; }
+.tabs button { flex: 1 1 auto; border-radius: 4px; padding: 4px 6px; font-size: 12px; }

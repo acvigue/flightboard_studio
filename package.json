@@ -1,0 +1,61 @@
+{
+  "name": "flightboard-studio",
+  "version": "1.0.0",
+  "description": "Airport LED board editor: map art, LED placement, Altium PCB export and firmware board definitions",
+  "main": "./out/main/index.js",
+  "author": "Koios Digital",
+  "homepage": "https://koiosdigital.net",
+  "scripts": {
+    "format": "prettier --write .",
+    "lint": "eslint --cache .",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "postinstall": "electron-builder install-app-deps",
+    "build:unpack": "npm run build && electron-builder --dir",
+    "build:win": "npm run build && bash scripts/publish-pcbgen.sh win-x64 && electron-builder --win --x64",
+    "build:mac": "npm run build && scripts/publish-pcbgen.sh && electron-builder --mac",
+    "build:mac:dir": "npm run build && scripts/publish-pcbgen.sh && electron-builder --mac --dir -c.mac.identity=-",
+    "build:mac:local": "npm run build && scripts/publish-pcbgen.sh && electron-builder --mac -c.mac.identity=-",
+    "pcbgen:publish": "scripts/publish-pcbgen.sh",
+    "build:linux": "npm run build && electron-builder --linux",
+    "build:mac:x64": "npm run build && scripts/publish-pcbgen.sh osx-x64 && electron-builder --mac --x64 -c.mac.identity=-",
+    "art": "node scripts/make-art.mjs"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "jsts": "^2.12.1",
+    "opentype.js": "^2.0.0",
+    "pinia": "^4.0.3",
+    "proj4": "^2.22.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "3.0.0",
+    "@electron-toolkit/eslint-config-ts": "^3.1.0",
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@types/node": "^22.19.1",
+    "@types/proj4": "^2.19.0",
+    "@vitejs/plugin-vue": "^6.0.2",
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-vue": "^10.6.2",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
+    "vue": "^3.5.25",
+    "vue-eslint-parser": "^10.2.0",
+    "vue-tsc": "^3.1.6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  }
+}

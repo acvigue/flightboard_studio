@@ -1,0 +1,87 @@
+appId: net.koiosdigital.flightboard-studio
+productName: Flightboard Studio
+copyright: Copyright © 2026 Koios Digital
+directories:
+  buildResources: build
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!scripts/*'
+  - '!build/art/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,RELEASING.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+npmRebuild: false
+# releases are made by the GitHub workflow (.github/workflows/build.yml); no auto-update feed
+publish: null
+
+# The Altium generator (self-contained .NET, scripts/publish-pcbgen.sh <rid>) and its template ship inside the app, so
+# a built studio exports Altium projects without a pcbgen checkout or an installed .NET. ${arch} is x64 / arm64.
+mac:
+  category: public.app-category.developer-tools
+  target: dmg
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extraResources:
+    - from: ../pcbgen/out/publish/osx-${arch}
+      to: pcbgen
+    - from: ../pcbgen/out/publish/template/Plane_Template
+      to: pcbgen-template/Plane_Template
+      filter: ['*.SchDoc', '*.PcbDoc', '*.PrjPcb', '*.PrjPcbStructure', '*.OutJob', '*.BomDoc']
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: Flightboard Studio saves projects and exports to your Documents folder when you choose it.
+    - NSDownloadsFolderUsageDescription: Flightboard Studio saves exports to your Downloads folder when you choose it.
+  # signing: a "Developer ID Application" identity from CSC_LINK / CSC_KEY_PASSWORD (CI) or the keychain; without one
+  # build with -c.mac.identity=- (ad-hoc). Notarization is switched on by the workflow when Apple credentials exist.
+  notarize: false
+
+dmg:
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
+  title: ${productName} ${version}
+  background: build/background.tiff
+  icon: build/icon.icns
+  iconSize: 100
+  iconTextSize: 12
+  window:
+    width: 660
+    height: 400
+  contents:
+    - x: 170
+      y: 205
+      type: file
+    - x: 490
+      y: 205
+      type: link
+      path: /Applications
+  format: ULFO
+
+win:
+  executableName: flightboard-studio
+  target:
+    - target: nsis
+      arch: [x64]
+  extraResources:
+    - from: ../pcbgen/out/publish/win-${arch}
+      to: pcbgen
+    - from: ../pcbgen/out/publish/template/Plane_Template
+      to: pcbgen-template/Plane_Template
+      filter: ['*.SchDoc', '*.PcbDoc', '*.PrjPcb', '*.PrjPcbStructure', '*.OutJob', '*.BomDoc']
+nsis:
+  artifactName: ${name}-${version}-win-${arch}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+
+linux:
+  target:
+    - AppImage
+  category: Utility
+appImage:
+  artifactName: ${name}-${version}-linux-${arch}.${ext}

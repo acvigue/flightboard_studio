@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <radialGradient id="glowBlue"><stop offset="0" stop-color="#6fb2ff" stop-opacity="0.75"/><stop offset="1" stop-color="#6fb2ff" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glowAmber"><stop offset="0" stop-color="#f2b233" stop-opacity="0.8"/><stop offset="1" stop-color="#f2b233" stop-opacity="0"/></radialGradient>
+</defs>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c2531"/><stop offset="1" stop-color="#0c1016"/></linearGradient>
+  <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  <pattern id="dots" width="41.2" height="41.2" patternUnits="userSpaceOnUse"><circle cx="20.6" cy="20.6" r="3" fill="#ffffff" fill-opacity="0.05"/></pattern>
+</defs>
+<rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+<g clip-path="url(#sq)">
+  <rect x="100" y="100" width="824" height="824" fill="url(#dots)"/>
+  <!-- a taxiway curving in from the lower right, amber lights -->
+  <path d="M 960 770 C 770 770 650 715 575 585" fill="none" stroke="#2a313b" stroke-width="64" stroke-linecap="round"/>
+  <path d="M 960 770 C 770 770 650 715 575 585" fill="none" stroke="#9aa3ad" stroke-width="5" opacity="0.45"/>
+  <circle cx="850" cy="767" r="44" fill="url(#glowAmber)"/><rect x="834" y="751" width="32" height="32" rx="5" fill="#f2b233"/><circle cx="735" cy="744" r="44" fill="url(#glowAmber)"/><rect x="719" y="728" width="32" height="32" rx="5" fill="#f2b233"/><circle cx="638" cy="684" r="44" fill="url(#glowAmber)"/><rect x="622" y="668" width="32" height="32" rx="5" fill="#f2b233"/>
+  <!-- the runway with its end chevron, centred on the icon: 520 of runway + 0.12 w + chevron depth -->
+  <g transform="rotate(-35 512 512)">
+    <rect x="190" y="427" width="490" height="170" rx="6.8" fill="#2a313b"/>
+<line x1="190" y1="437" x2="680" y2="437" stroke="#dfe4ea" stroke-width="10"/>
+<line x1="190" y1="587" x2="680" y2="587" stroke="#dfe4ea" stroke-width="10"/>
+<line x1="220.6" y1="461" x2="220.6" y2="563" stroke="#dfe4ea" stroke-width="16" stroke-linecap="round"/>
+<line x1="258" y1="461" x2="258" y2="563" stroke="#dfe4ea" stroke-width="16" stroke-linecap="round"/>
+<rect x="275.6" y="461.6" width="100.8" height="100.8" rx="50.4" fill="url(#glowBlue)"/>
+<rect x="308" y="494" width="36" height="36" rx="5.3999999999999995" fill="#6fb2ff"/>
+<rect x="376.6" y="461.6" width="100.8" height="100.8" rx="50.4" fill="url(#glowBlue)"/>
+<rect x="409" y="494" width="36" height="36" rx="5.3999999999999995" fill="#6fb2ff"/>
+<rect x="477.6" y="461.6" width="100.8" height="100.8" rx="50.4" fill="url(#glowBlue)"/>
+<rect x="510" y="494" width="36" height="36" rx="5.3999999999999995" fill="#6fb2ff"/>
+<rect x="578.6" y="461.6" width="100.8" height="100.8" rx="50.4" fill="url(#glowBlue)"/>
+<rect x="611" y="494" width="36" height="36" rx="5.3999999999999995" fill="#6fb2ff"/>
+<polyline points="700.4,410 843.1999999999999,512 700.4,614" fill="none" stroke="#f4f6f8" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="8" stroke-linecap="round"/>
+<polyline points="700.4,453.25740705712866 782.6396301200199,512 700.4,570.7425929428714" fill="none" stroke="#f4f6f8" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="8" stroke-linecap="round"/>
+  </g>
+</g>
+<rect x="100.5" y="100.5" width="823" height="823" rx="185" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="3"/>
+</svg>
