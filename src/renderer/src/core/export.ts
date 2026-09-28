@@ -70,7 +70,37 @@ export function labelPathD(fs: Fonts, lb: Label, tf: BoardTransform): { d: strin
   return { d, box: m < 0 ? [ax - bb.x2, ay + bb.y1, ax - bb.x1, ay + bb.y2] : [ax + bb.x1, ay + bb.y1, ax + bb.x2, ay + bb.y2] }
 }
 
-/** A label as filled polygons in board mm (curves flattened, counters as holes). */
+/** The area a font renderer paints for a set of contours (nonzero winding): every point whose contours' windings do
+ *  not cancel. Built up contour by contour as regions per winding number, so overlapping strokes (Jost's R, E, K),
+ *  counters, and islands inside counters (the tail of Q, the a of @) all come out as drawn. */
+function nonzeroFill(contours: { g: gm.G; s: number }[]): gm.G {
+  let byW = new Map<number, gm.G>()
+  const add = (m: Map<number, gm.G>, w: number, g: gm.G): void => {
+    if (w === 0 || g.isEmpty()) return
+    const prev = m.get(w)
+    m.set(w, prev ? gm.union([prev, g]) : g)
+  }
+  for (const c of contours) {
+    const next = new Map<number, gm.G>()
+    let covered: gm.G | null = null
+    for (const [w, g] of byW) {
+      covered = covered ? gm.union([covered, g]) : g
+      if (!g.intersects(c.g)) {
+        add(next, w, g)
+        continue
+      }
+      add(next, w + c.s, g.intersection(c.g))
+      add(next, w, g.difference(c.g))
+    }
+    add(next, c.s, covered ? c.g.difference(covered) : c.g)
+    byW = next
+  }
+  return gm.union([...byW.values()])
+}
+
+/** A label as filled polygons in board mm (curves flattened, counters as holes): the area a font renderer paints
+ *  (nonzero winding), glyph by glyph. (Deciding holes by containment cut the legs off R and the bars off E: "O'HARE"
+ *  came out as "O'HAPL".) */
 export function labelPolys(fs: Fonts, lb: Label, tf: BoardTransform): gm.G[] {
   const font = lb.weight === 600 ? fs.semibold : fs.regular
   const hMm = lb.heightM * tf.k
@@ -80,68 +110,60 @@ export function labelPolys(fs: Fonts, lb: Label, tf: BoardTransform): gm.G[] {
   const opt = track ? { letterSpacing: track / size } : {}
   const adv = font.getAdvanceWidth(lb.text, size, opt) - (track ? track : 0)
   const ox = lb.anchor === 'middle' ? -adv / 2 : lb.anchor === 'end' ? -adv : 0
-  const path = font.getPath(lb.text, ox, 0, size, opt)
   const a = (-lb.rotDeg * Math.PI) / 180
   const ca = Math.cos(a)
   const sa = Math.sin(a)
   const m = lb.layer === 'silkBack' ? -1 : 1 // back silk reads from the back: mirrored about the anchor
   const T = (x: number, y: number): [number, number] => [ax + m * (x * ca - y * sa), ay + x * sa + y * ca]
-  // flatten into contours
-  const contours: [number, number][][] = []
-  let cur: [number, number][] = []
-  let px = 0
-  let py = 0
   const N = 6
-  for (const c of path.commands) {
-    if (c.type === 'M') {
-      if (cur.length >= 3) contours.push(cur)
-      cur = [T(c.x, c.y)]
-      px = c.x
-      py = c.y
-    } else if (c.type === 'L') {
-      cur.push(T(c.x, c.y))
-      px = c.x
-      py = c.y
-    } else if (c.type === 'Q') {
-      for (let i = 1; i <= N; i++) {
-        const t = i / N
-        const u = 1 - t
-        cur.push(T(u * u * px + 2 * u * t * c.x1 + t * t * c.x, u * u * py + 2 * u * t * c.y1 + t * t * c.y))
-      }
-      px = c.x
-      py = c.y
-    } else if (c.type === 'C') {
-      for (let i = 1; i <= N; i++) {
-        const t = i / N
-        const u = 1 - t
-        cur.push(T(u * u * u * px + 3 * u * u * t * c.x1 + 3 * u * t * t * c.x2 + t * t * t * c.x, u * u * u * py + 3 * u * u * t * c.y1 + 3 * u * t * t * c.y2 + t * t * t * c.y))
-      }
-      px = c.x
-      py = c.y
-    } else if (c.type === 'Z') {
-      if (cur.length >= 3) contours.push(cur)
-      cur = []
-    }
+  const signed = (r: [number, number][]): number => r.reduce((s2, p, i) => { const q = r[(i + 1) % r.length]; return s2 + p[0] * q[1] - q[0] * p[1] }, 0) / 2
+  const valid = (r: [number, number][]): gm.G => {
+    const g = gm.polygon([r])
+    return g.isValid() ? g : gm.buffer(g, 0)
   }
-  if (cur.length >= 3) contours.push(cur)
-  // nesting: a contour inside an odd number of others is a hole of its innermost container
-  const area = (r: [number, number][]): number => Math.abs(r.reduce((s2, p, i) => { const q = r[(i + 1) % r.length]; return s2 + p[0] * q[1] - q[0] * p[1] }, 0)) / 2
-  const items = contours.map((r) => ({ r, g: gm.polygon([r]), a: area(r) })).filter((x) => x.a > 1e-6 && !x.g.isEmpty()).sort((x, y) => y.a - x.a)
-  const depth: number[] = []
-  const parent: number[] = []
-  items.forEach((it, i) => {
-    let best = -1
-    for (let j = 0; j < i; j++) if (items[j].a > it.a && items[j].g.contains(gm.point(it.r[0]))) best = best < 0 || items[j].a < items[best].a ? j : best
-    parent[i] = best
-    depth[i] = best < 0 ? 0 : depth[best] + 1
-  })
   const out: gm.G[] = []
-  items.forEach((it, i) => {
-    if (depth[i] % 2) return
-    const holes = items.filter((_, j) => parent[j] === i && depth[j] % 2 === 1).map((h) => h.r)
-    const g = gm.polygon([it.r, ...holes])
-    if (!g.isEmpty()) out.push(g)
-  })
+  for (const path of font.getPaths(lb.text, ox, 0, size, opt)) {
+    // flatten this glyph into contours
+    const contours: [number, number][][] = []
+    let cur: [number, number][] = []
+    let px = 0
+    let py = 0
+    for (const c of path.commands) {
+      if (c.type === 'M') {
+        if (cur.length >= 3) contours.push(cur)
+        cur = [T(c.x, c.y)]
+        px = c.x
+        py = c.y
+      } else if (c.type === 'L') {
+        cur.push(T(c.x, c.y))
+        px = c.x
+        py = c.y
+      } else if (c.type === 'Q') {
+        for (let i = 1; i <= N; i++) {
+          const t = i / N
+          const u = 1 - t
+          cur.push(T(u * u * px + 2 * u * t * c.x1 + t * t * c.x, u * u * py + 2 * u * t * c.y1 + t * t * c.y))
+        }
+        px = c.x
+        py = c.y
+      } else if (c.type === 'C') {
+        for (let i = 1; i <= N; i++) {
+          const t = i / N
+          const u = 1 - t
+          cur.push(T(u * u * u * px + 3 * u * u * t * c.x1 + 3 * u * t * t * c.x2 + t * t * t * c.x, u * u * u * py + 3 * u * u * t * c.y1 + 3 * u * t * t * c.y2 + t * t * t * c.y))
+        }
+        px = c.x
+        py = c.y
+      } else if (c.type === 'Z') {
+        if (cur.length >= 3) contours.push(cur)
+        cur = []
+      }
+    }
+    if (cur.length >= 3) contours.push(cur)
+    const cs = contours.map((r) => ({ r, s: signed(r) })).filter((c) => Math.abs(c.s) > 1e-6)
+    if (!cs.length) continue
+    for (const q of gm.polygonsOf(nonzeroFill(cs.map((c) => ({ g: valid(c.r), s: Math.sign(c.s) }))))) if (!q.isEmpty()) out.push(q)
+  }
   return out
 }
 
@@ -249,16 +271,28 @@ function svgHead(p: Project, title: string): string {
 }
 
 export function copperArtMm(p: Project, tf: BoardTransform): gm.G {
-  // exposed copper areas: terminal outlines + hatch, copper lines and labels are added by the copper exporter;
-  // for the silkscreen cut we approximate with the terminal footprints buffered
+  // the copper polygons' footprints (terminal outlines with their hatch)
   return gm.union(p.polys.filter((x) => (x.layer ?? (x.cls === 'terminal' ? 'copper' : 'silk')) === 'copper').map((x) => mmPoly(x.rings, tf)))
+}
+
+/** Where the silkscreen must not go because exposed copper art is there (copper wins over silk): the copper polygons
+ *  plus 0.5 mm, and the copper lines and labels (north arrow, title block, terminal names) plus 0.35 mm. */
+export function copperKeepout(p: Project, tf: BoardTransform, fs: Fonts): gm.G {
+  const vis = (key: string): boolean => p.layerVisibility[key] !== false
+  const strokes: gm.G[] = []
+  for (const l of p.lines) if (l.layer === 'copper') strokes.push(gm.buffer(mmLine(l.pts, tf), (l.widthMm ?? LINE_WIDTH[l.cls] ?? 0.15) / 2, { cap: 'round', join: 'round', segs: 4 }))
+  for (const lb of p.labels) if (lb.layer === 'copper' && vis('labels')) strokes.push(...labelPolys(fs, lb, tf))
+  return gm.union([gm.buffer(copperArtMm(p, tf), 0.5), gm.buffer(gm.union(strokes), 0.35)])
 }
 
 /** Top silkscreen artwork into a sink (outlines, lines, hatches, labels, sign boxes), cut around LEDs and copper. */
 export function collectTopSilk(p: Project, tf: BoardTransform, fs: Fonts, sink: ArtSink): void {
   const vis = (key: string): boolean => p.layerVisibility[key] !== false
-  const keep = gm.union([ledKeepout(p.leds, tf, 0.4), gm.buffer(copperArtMm(p, tf), 0.5)])
+  const cuKeep = copperKeepout(p, tf, fs)
+  const keep = gm.union([ledKeepout(p.leds, tf, 0.4), cuKeep])
   const ctx = makeCtx(p, tf, keep)
+  const cuParts = gm.polygonsOf(cuKeep)
+  const cuTree = cuParts.length ? new gm.Tree<gm.G>(cuParts.map((q) => [q, q])) : null
   const rwyU = gm.union(p.polys.filter((x) => x.cls === 'runway').map((x) => mmPoly(x.rings, tf)))
   const pav = gm.union(p.polys.filter((x) => x.cls === 'pavement').map((x) => mmPoly(x.rings, tf)))
   for (const poly of p.polys) {
@@ -280,9 +314,18 @@ export function collectTopSilk(p: Project, tf: BoardTransform, fs: Fonts, sink: 
         // taxiway sign: an outlined box (0.15 mm stroke as a filled ring) around the text, like the ORD silk. Same
         // rotated box as the editor and the collision checks (the text sits on its baseline at the label position).
         const outer = gm.polygon([labelCorners(labelBox(lb, tf, fs))])
-        sink.geom(outer.difference(gm.buffer(outer, -0.15, { join: 'mitre' })))
+        let box = outer.difference(gm.buffer(outer, -0.15, { join: 'mitre' }))
+        const hit = cuTree?.query(outer, 0.05) ?? []
+        if (hit.length) box = box.difference(gm.union(hit))
+        if (!box.isEmpty()) sink.geom(box)
       }
-      sink.label(lb)
+      // a label over copper art loses the part that would print on the copper
+      const hit = cuTree?.query(gm.polygon([labelCorners(labelBox(lb, tf, fs))]), 0.05) ?? []
+      if (!hit.length) sink.label(lb)
+      else {
+        const g = gm.union(labelPolys(fs, lb, tf)).difference(gm.union(hit))
+        if (!g.isEmpty()) sink.geom(g)
+      }
     }
   }
 }

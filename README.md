@@ -132,7 +132,8 @@ there is no need to close a studio that is already open.
      size, class (runway / taxiway / ramp / gate), role (junction / entry / hold), feature, label, lat/lon.
    - `top_silk.svg`, `top_copper.svg`, `bottom_silk.svg` (the back silk, see below), `edge_cuts.svg` – sized to the board
      (`width`/`height` in mm, `viewBox 0 0 W H`), everything as filled paths (text converted to outlines with the
-     bundled Jost font), silkscreen cut around LED bodies and around exposed copper.
+     bundled Jost font), silkscreen cut around LED bodies and around all exposed copper art (polygons, lines and
+     text: copper wins over silk). Text becomes polygons the way a font renderer fills it (nonzero winding).
    Save/Open keep the whole project as `<id>.flightboard.json`.
 6. **PCB** tab: the Altium generator (`../pcbgen`, C# / AltiumSharp) runs as a sidecar process.
    - **Prepare** sends the board to the generator as a `pcbgen-job/1` job (`core/pcbjob.ts`: silk, back silk and

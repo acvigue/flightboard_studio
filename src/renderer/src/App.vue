@@ -178,8 +178,53 @@ onMounted(async () => {
   } catch (e) {
     console.log('AUTOTEST FAIL pan tests', String(e), (e as Error).stack)
   }
+  try {
+    await textTests()
+  } catch (e) {
+    console.log('AUTOTEST FAIL text tests', String(e), (e as Error).stack)
+  }
   console.log('AUTOTEST DONE')
 })
+
+/** Label outlines for the PCB (labelPolys) against the browser's own rasteriser filling the same text path: every
+ *  sample the canvas paints solidly must be inside the polygons and every clearly empty one outside. (Holes decided
+ *  by containment used to cut the legs off R and the bars off E: "O'HARE" came out as "O'HAPL".) */
+async function textTests(): Promise<void> {
+  const { labelPolys, labelPathD, loadFonts } = await import('./core/export')
+  const gm = await import('./core/geom')
+  const out = (s: string): void => console.log('AUTOTEST text:', s)
+  const fs = await loadFonts()
+  const t = store.tf!
+  for (const [text, weight] of [["CHICAGO O'HARE INTERNATIONAL", 600], ['KORD ELEV 680 FT SCALE 1:11,744', 400], ['RENKXQ&%@8', 600]] as [string, 400 | 600][]) {
+    const lb: Label = { id: 'x', text, pos: t.toM([60, 60]), heightM: 3 / t.k, rotDeg: 0, layer: 'copper', weight, anchor: 'start' }
+    const polys = gm.union(labelPolys(fs, lb, t))
+    const { d, box } = labelPathD(fs, lb, t)
+    const S = 24 // px per mm
+    const [x0, y0, x1, y1] = [box[0] - 0.2, box[1] - 0.2, box[2] + 0.2, box[3] + 0.2]
+    const cv = document.createElement('canvas')
+    cv.width = Math.ceil((x1 - x0) * S)
+    cv.height = Math.ceil((y1 - y0) * S)
+    const cx = cv.getContext('2d')!
+    cx.setTransform(S, 0, 0, S, -x0 * S, -y0 * S)
+    cx.fill(new Path2D(d), 'nonzero')
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data
+    let solid = 0
+    let missing = 0
+    let extra = 0
+    for (let j = 1; j < cv.height; j += 2)
+      for (let i = 1; i < cv.width; i += 2) {
+        const al = px[(j * cv.width + i) * 4 + 3]
+        if (al > 20 && al < 235) continue // antialiased edge
+        const inside = polys.contains(gm.point([x0 + (i + 0.5) / S, y0 + (j + 0.5) / S]))
+        if (al >= 235) {
+          solid++
+          if (!inside) missing++
+        } else if (inside) extra++
+      }
+    out(`"${text}": ${solid} painted samples, ${missing} missing from the polygons, ${extra} extra`)
+    if (missing > solid * 0.001 || extra > solid * 0.001) out(`FAIL label outline "${text}" differs from the rendered text`)
+  }
+}
 
 /** Canvas controls: a right-drag pans (no context menu), a right-click without moving opens the context menu. */
 async function panTests(): Promise<void> {
